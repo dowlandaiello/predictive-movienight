@@ -1,6 +1,6 @@
 install.packages("pacman")
 
-pacman::p_load("ggplot2")
+pacman::p_load("ggplot2", "magrittr", "dplyr")
 
 ratings <- read.table(
   "~/Downloads/title.ratings.tsv",
@@ -18,13 +18,23 @@ filmInfos <- read.table(
   quote = "",
 )
 
+castInfos <- read.table(
+  "~/Downloads/title.crew.tsv",
+  header = TRUE,
+  sep = "\t",
+  na.strings = "\\N",
+  comment.char = "",
+  quote = "",
+)
+
 # We only want movies around 1h 30m - 2h 30m that were made after 1970
 ctmpTitles <- filmInfos[
   filmInfos$startYear >= 1970 &
-  filmInfos$runtimeMinutes >= 1.5 * 60 &
-  filmInfos$runtimeMinutes <= 2.5 * 60,
+    filmInfos$runtimeMinutes >= 1.5 * 60 &
+    filmInfos$runtimeMinutes <= 2.5 * 60,
 ]
-ratedTitles <- merge(ctmpTitles, ratings)
+ratedTitles <- merge(ctmpTitles, ratings) %>%
+  merge(castInfos)
 
 approximateMovieMatches <- function(m, name) {
   # The name my family knows is probably the name most people know.
@@ -32,51 +42,55 @@ approximateMovieMatches <- function(m, name) {
   # with both the original and primary title that matches
   m <- m[m$primaryTitle == name,]
   
-  return(
-    head(
-      m[
-        order(
-          m$primaryTitle,
-          m$originalTitle,
-          m$startYear
-        ),
-        c("tconst"),
-        drop = FALSE
-      ],
-      1
-    )
-  )
+  m[
+    order(
+      m$primaryTitle,
+      m$originalTitle,
+      m$startYear,
+      method = "radix",
+      decreasing = c(FALSE, FALSE, TRUE)
+    ),
+    c("tconst"),
+    drop = FALSE
+  ] %>%
+    head(1)
 }
 
 # Attach columns for the fam's ratings to the movie's ID
 rateMovie <- function(m, m_rating, j_rating, d_rating, h_rating) {
-  return(
-    merge(
-      m,
-      data.frame(
-        tconst = m$tconst,
-        martha = m_rating,
-        john = j_rating,
-        dowland = d_rating,
-        hayden = h_rating
-      )  
-    )
+  merge(
+    m,
+    data.frame(
+      tconst = m$tconst,
+      martha = m_rating,
+      john = j_rating,
+      dowland = d_rating,
+      hayden = h_rating
+    ),
+    by = "tconst"
   )
 }
 
 # Rates a movie by the first matching title, not an ID, and records it
 rateTitle <- function(title, m_rating, j_rating, d_rating, h_rating) {
-  return(
-    rateMovie(
-      approximateMovieMatches(ratedTitles, title),
-      m_rating, j_rating, d_rating, h_rating
-    )
+  rateMovie(
+    approximateMovieMatches(ratedTitles, title),
+    m_rating, j_rating, d_rating, h_rating
   )
 }
 
 # Collect the fam's movie ratings
-watched <- rateTitle(
-  "50/50",
-  8.0, 8.0, 8.0, 7.8
+watched <- rbind(
+  rateTitle(
+    "50/50",
+    8.0, 8.0, 8.0, 7.8
+  ),
+  rateTitle(
+    "The Imitation Game",
+    9.0, 9.0, 9.0, 9.0
+  )
 )
+
 write.csv(watched, file = "db")
+
+significantAttributes <- c("averageRating", "genres", "directors", "writers")
