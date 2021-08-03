@@ -20,10 +20,10 @@ Well, I don't have many datapoints from my family yet, since we've only watched
 For what it's worth, I've graphed the results of the algorithm I use to rank
 movies against the ratings our family gave movies we've watched. Take a look:
 
-![Movies our family has watched Vs IMDB database](https://raw.githubusercontent.com/dowlandaiello/predictive-movienight/main/.github/media/our_ratings_vs_predictions_all.png)
+![Movies our family has watched Vs IMDB database](./.github/media/our_ratings_vs_predictions_all.png)
 
 This graph makes it pretty evident that the data points we've gathered are very
 sparse so far. If we ignore the ratings my family gives, we can see a much more
 digestible view of the ratings the algorithm produces:
 
-![All IMDB movies vs Predicted Ratings](https://raw.githubusercontent.com/dowlandaiello/predictive-movienight/main/.github/media/all_imdb.png)
+![All IMDB movies vs Predicted Ratings](./.github/media/all_imdb.png)
