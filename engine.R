@@ -64,8 +64,8 @@ rateTitle <- function(title, ratings) {
 }
 
 mode <- function(x) {
-  if (is.character(x)) {
-    x <- strsplit(x, ",")
+  if (is.vector(x)) {
+    x <- unlist(x)
   }
   
   u <- unique(x)
@@ -108,18 +108,29 @@ watched <- watched %>%
   select(-c(familyRating)) %>%
   arrange(desc(averageRating))
 
-#NOTE: KEEP STRINGS INSTEAD OF TURNING THEM INTO VECTORS. IM PRETTY SURE YOU CAN
-#VECTORIZE CHECKING IF A SUBSTRING IS IN
-
 # The IDEAL movie
 ideal <- watched %>%
   select(genres, directors, writers) %>%
   summarise(
-    genres = mode(genres, ","),
-    directors = mode(directors, ","),
-    writers = mode(writers, ",")
+    genres = mode(strsplit(genres, ",")),
+    directors = mode(strsplit(directors, ",")),
+    writers = mode(strsplit(writers, ","))
   )
 
 # Movies are only eligible if they have at least one genre in common
-eligible <- ratedTitles %>%
-  filter(grepl(ideal$genres[1]), genres))
+bestMovies <- ratedTitles %>%
+  mutate(score =
+           2 ** (
+              str_count(genres, ideal$genres) +
+              str_count(directors, ideal$directors) +
+              str_count(writers, ideal$writers)
+           ) +
+           (
+              log10(numVotes ** (1/5)) *
+              averageRating
+           )
+         ) %>%
+  arrange(desc(score)) %>%
+  filter(!(tconst %in% watched$tconst) & (titleType != "tvEpisode"))
+
+bestMovies %>% head(200) %>% write.csv(file = "res")
