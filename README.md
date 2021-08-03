@@ -48,3 +48,10 @@ this:
 4: tt0268978    A Beautiful Mind      2001        Biography,Drama           8.2 18.74277
 5: tt0264464 Catch Me If You Can      2002  Biography,Crime,Drama           8.1 18.62060
 ```
+
+## Future Steps
+
+Next, I want to work on an extension to the core engine that parses the output
+CSV, producing a more human readable form that my family can browse. This could
+take the form of a full-fledged web app or a simple CSV to PDF script. I also want
+to minimize and/or explain the usage of certain constants I threw into the algorithm.
