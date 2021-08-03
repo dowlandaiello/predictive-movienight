@@ -27,3 +27,8 @@ sparse so far. If we ignore the ratings my family gives, we can see a much more
 digestible view of the ratings the algorithm produces:
 
 ![All IMDB movies vs Predicted Ratings](./.github/media/all_imdb.png)
+
+Here, we can see the clear distinction between movies who have a high appeal to
+my family's interests (i.e., genres, writers, directors, cast, etc), which have
+an immediate leg up, and movies that get on the charts by simply being popular
+and highly acclaimed.
