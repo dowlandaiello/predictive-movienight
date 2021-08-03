@@ -36,8 +36,8 @@ and highly acclaimed.
 ## Usage
 
 Using this R script is relatively convoluted at the moment. However, its results
-are radically simple to interpret: a CSV file of the top 200 IMDB movies, ranked
-by their combined audience score and taste relevance. The results will look like
+are easy to interpret: a CSV file of the top 200 IMDB movies, ranked by their
+combined audience score and taste relevance. The results will look like
 this:
 
 ```
