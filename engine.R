@@ -1,13 +1,19 @@
 install.packages("pacman")
 
-pacman::p_load("ggplot2", "magrittr", "dplyr")
+pacman::p_load("ggplot2", "magrittr", "dplyr", "data.table", "stringr")
 
-ratings <- read.table(
+# John always goes first
+RATING_WEIGHTS <- c(0.475, 0.275, 0.125, 0.125)
+
+# Don't want to over fit
+SIGNIFICANT_ATTRIBUTES <- c("averageRating", "genres", "directors", "writers")
+
+ratings <- as.data.table(read.table(
   "~/Downloads/title.ratings.tsv",
   header = TRUE,
   sep = "\t",
   na.strings = "\\N",
-)
+))
 
 filmInfos <- read.table(
   "~/Downloads/title.basics.tsv",
@@ -16,7 +22,8 @@ filmInfos <- read.table(
   na.strings = "\\N",
   comment.char = "",
   quote = "",
-)
+) %>%
+  as.data.table
 
 castInfos <- read.table(
   "~/Downloads/title.crew.tsv",
@@ -25,13 +32,14 @@ castInfos <- read.table(
   na.strings = "\\N",
   comment.char = "",
   quote = "",
-)
+) %>%
+  as.data.table
 
 # We only want movies around 1h 30m - 2h 30m that were made after 1970
 ctmpTitles <- filmInfos[
-  filmInfos$startYear >= 1970 &
-    filmInfos$runtimeMinutes >= 1.5 * 60 &
-    filmInfos$runtimeMinutes <= 2.5 * 60,
+  startYear >= 1970 &
+  runtimeMinutes >= 1.5 * 60 &
+  runtimeMinutes <= 2.5 * 60,
 ]
 ratedTitles <- merge(ctmpTitles, ratings) %>%
   merge(castInfos)
@@ -39,43 +47,33 @@ ratedTitles <- merge(ctmpTitles, ratings) %>%
 approximateMovieMatches <- function(m, name) {
   # The name my family knows is probably the name most people know.
   # These are the only possibilities. Filter them by matches
-  # with both the original and primary title that matches
-  m <- m[m$primaryTitle == name,]
-  
-  m[
-    order(
-      m$primaryTitle,
-      m$originalTitle,
-      m$startYear,
-      method = "radix",
-      decreasing = c(FALSE, FALSE, TRUE)
-    ),
-    c("tconst"),
-    drop = FALSE
-  ] %>%
+  # with both the original and primary title that matches.
+  m[primaryTitle == name,] %>%
+    # Then, sort them by the closest matching second title
+    mutate(
+      titleDiff = (originalTitle == name)
+    ) %>%
+    .[order(titleDiff, numVotes, decreasing = TRUE), .(tconst)] %>%
     head(1)
 }
 
-# Attach columns for the fam's ratings to the movie's ID
-rateMovie <- function(m, m_rating, j_rating, d_rating, h_rating) {
-  merge(
-    m,
-    data.frame(
-      tconst = m$tconst,
-      martha = m_rating,
-      john = j_rating,
-      dowland = d_rating,
-      hayden = h_rating
-    ),
-    by = "tconst"
-  )
+# Rates a movie by the first matching title, not an ID, and records it
+rateTitle <- function(title, ratings) {
+  approximateMovieMatches(ratedTitles, title) %>%
+    mutate(familyRating = weighted.mean(ratings, RATING_WEIGHTS))
 }
 
-# Rates a movie by the first matching title, not an ID, and records it
-rateTitle <- function(title, m_rating, j_rating, d_rating, h_rating) {
-  rateMovie(
-    approximateMovieMatches(ratedTitles, title),
-    m_rating, j_rating, d_rating, h_rating
+mode <- function(x) {
+  if (is.character(x)) {
+    x <- strsplit(x, ",")
+  }
+  
+  u <- unique(x)
+  
+  # Get the two most frequent values
+  paste(
+    u[sort(tabulate(match(x, u)), decreasing = TRUE)[1:2]],
+    collapse = "|"
   )
 }
 
@@ -83,14 +81,45 @@ rateTitle <- function(title, m_rating, j_rating, d_rating, h_rating) {
 watched <- rbind(
   rateTitle(
     "50/50",
-    8.0, 8.0, 8.0, 7.8
+    c(8.0, 8.0, 8.0, 7.8)
   ),
   rateTitle(
     "The Imitation Game",
-    9.0, 9.0, 9.0, 9.0
+    c(9.0, 9.0, 9.0, 9.0)
   )
 )
 
 write.csv(watched, file = "db")
+ 
+# Include the above fields for the family's ratings
+watched <- watched %>%
+  merge(
+    ratedTitles,
+    by = "tconst",
+    all.x = TRUE,
+  ) %>%
+  select(tconst, familyRating, averageRating, genres, directors, writers) %>%
+  # Consolidate family ratings and IMDB ratings. TODO: This should be weighted
+  # more for family in the future
+  mutate(
+    averageRating = rowMeans(select(., averageRating, familyRating))
+  ) %>%
+  # No reason for extra columns
+  select(-c(familyRating)) %>%
+  arrange(desc(averageRating))
 
-significantAttributes <- c("averageRating", "genres", "directors", "writers")
+#NOTE: KEEP STRINGS INSTEAD OF TURNING THEM INTO VECTORS. IM PRETTY SURE YOU CAN
+#VECTORIZE CHECKING IF A SUBSTRING IS IN
+
+# The IDEAL movie
+ideal <- watched %>%
+  select(genres, directors, writers) %>%
+  summarise(
+    genres = mode(genres, ","),
+    directors = mode(directors, ","),
+    writers = mode(writers, ",")
+  )
+
+# Movies are only eligible if they have at least one genre in common
+eligible <- ratedTitles %>%
+  filter(grepl(ideal$genres[1]), genres))
