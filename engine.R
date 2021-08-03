@@ -1,6 +1,6 @@
 install.packages("pacman")
 
-pacman::p_load("ggplot2", "magrittr", "dplyr", "data.table", "stringr")
+pacman::p_load("ggplot2", "magrittr", "dplyr", "data.table", "stringr", "plotly")
 
 # John always goes first
 RATING_WEIGHTS <- c(0.475, 0.275, 0.125, 0.125)
@@ -92,13 +92,15 @@ watched <- rbind(
 write.csv(watched, file = "db")
  
 # Include the above fields for the family's ratings
-watched <- watched %>%
+watchedContext <- watched %>%
   merge(
     ratedTitles,
     by = "tconst",
     all.x = TRUE,
   ) %>%
-  select(tconst, familyRating, averageRating, genres, directors, writers) %>%
+  select(tconst, familyRating, averageRating, genres, directors, writers, numVotes)
+
+watched <- watchedContext %>%
   # Consolidate family ratings and IMDB ratings. TODO: This should be weighted
   # more for family in the future
   mutate(
@@ -118,19 +120,36 @@ ideal <- watched %>%
   )
 
 # Movies are only eligible if they have at least one genre in common
-bestMovies <- ratedTitles %>%
-  mutate(score =
-           2 ** (
-              str_count(genres, ideal$genres) +
-              str_count(directors, ideal$directors) +
-              str_count(writers, ideal$writers)
-           ) +
-           (
-              log10(numVotes ** (1/5)) *
-              averageRating
-           )
-         ) %>%
-  arrange(desc(score)) %>%
+context <- ratedTitles %>%
+  mutate(
+    tasteRelevance = 3 ** (
+      str_count(genres, ideal$genres) +
+      str_count(directors, ideal$directors) +
+      str_count(writers, ideal$writers)
+    ),
+    audienceFactor = (
+      log10(numVotes ** (1/5)) *
+      averageRating
+    ),
+    score = (
+      tasteRelevance + audienceFactor
+    )
+  ) %>%
+  arrange(desc(score))
+
+# Differentiate between our and their ratings so we can highlight them on the
+# chart
+ourRatings <- context %>%
+  filter(tconst %in% watched$tconst)
+bestMovies <- context %>%
   filter(!(tconst %in% watched$tconst) & (titleType != "tvEpisode"))
+
+# Graph the distribution of movies that appeal to our tastes!
+summaryBestMovies <- bestMovies[bestMovies %>% nrow %>% sample(50)] %>%
+  plot_ly(x = ~tasteRelevance, y = ~audienceFactor, z = ~score,
+          type = "scatter3d", mode = "markers") %>%
+  add_markers(x = ~ourRatings$tasteRelevance, y = ~ourRatings$audienceFactor,
+              z = ~ourRatings$score)
+summaryBestMovies 
 
 bestMovies %>% head(200) %>% write.csv(file = "res")
