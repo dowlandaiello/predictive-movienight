@@ -32,3 +32,19 @@ Here, we can see the clear distinction between movies who have a high appeal to
 my family's interests (i.e., genres, writers, directors, cast, etc), which have
 an immediate leg up, and movies that get on the charts by simply being popular
 and highly acclaimed.
+
+## Usage
+
+Using this R script is relatively convoluted at the moment. However, its results
+are radically simple to interpret: a CSV file of the top 200 IMDB movies, ranked
+by their combined audience score and taste relevance. The results will look like
+this:
+
+```
+      tconst        primaryTitle startYear                 genres averageRating    score
+1: tt0099685          Goodfellas      1990  Biography,Crime,Drama           8.7 19.48013
+2: tt1675434    The Intouchables      2011 Biography,Comedy,Drama           8.5 19.02272
+3: tt0253474         The Pianist      2002  Biography,Drama,Music           8.5 18.99665
+4: tt0268978    A Beautiful Mind      2001        Biography,Drama           8.2 18.74277
+5: tt0264464 Catch Me If You Can      2002  Biography,Crime,Drama           8.1 18.62060
+```
