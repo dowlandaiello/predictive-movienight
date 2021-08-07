@@ -1,5 +1,8 @@
 install.packages("pacman")
 
+# TODO: Make it so that movies we rate lower have their occurrences for keywords
+# count less in the final results
+
 pacman::p_load("ggplot2", "magrittr", "dplyr", "data.table", "stringr", "plotly")
 
 # John always goes first
@@ -379,9 +382,9 @@ bestMovies <- context %>%
 # Graph the distribution of movies that appeal to our tastes!
 summaryBestMovies <- bestMovies[bestMovies %>% nrow %>% sample(50)] %>%
   plot_ly(x = ~tasteRelevance, y = ~audienceFactor, z = ~score,
-          type = "scatter3d", mode = "markers") %>%
-  add_markers(x = ~ourRatings$tasteRelevance, y = ~ourRatings$audienceFactor,
-              z = ~ourRatings$score)
+          type = "scatter3d", mode = "markers")
+  #add_markers(x = ~ourRatings$tasteRelevance, y = ~ourRatings$audienceFactor,
+              #z = ~ourRatings$score)
 summaryBestMovies 
 
 # bestMovies %>% head(200) %>% write.csv(file = "res")
